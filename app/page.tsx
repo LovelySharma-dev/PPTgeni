@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 type Model = { id: string; name: string; provider: string };
-type Visual = { kind: string; label?: string; values?: number[]; shape?: string; x?: number; y?: number; w?: number; h?: number; src?: string };
+type Visual = { kind: string; label?: string; values?: number[]; items?: string[]; shape?: string; x?: number; y?: number; w?: number; h?: number; src?: string };
 type Slide = { type?: string; title?: string; subtitle?: string; takeaway?: string; body?: string; quote?: string; elements?: Visual[] };
 type Deck = { title: string; theme: string; themeConfig: { background: string; text: string; muted: string; accent: string }; model?: string; generationSource?: string; slides: Slide[] };
 
@@ -45,7 +45,7 @@ export default function Home() {
     finally { setLoading(false); }
   };
   const copy = useMemo(() => current?.body || current?.quote || current?.takeaway || current?.subtitle || "Your slide content will appear here.", [current]);
-  const visualMarkup = (current?.elements || []).map((item, index) => <div key={`${item.kind}-${index}`} className={`absolute rounded-2xl border border-white/10 bg-white/5 p-4 text-center ${item.kind === "chart" ? "right-[8%] top-[28%] h-[38%] w-[32%]" : item.kind === "timeline" ? "bottom-[18%] right-[8%] w-[40%]" : item.kind === "diagram" ? "right-[8%] top-[30%] w-[36%]" : "right-[10%] top-[34%] h-24 w-24 rounded-full"}`}><span className="block text-2xl font-black text-mint">{item.kind === "chart" ? "▥" : item.kind === "timeline" ? "→" : item.kind === "diagram" ? "◇" : "✦"}</span><span className="mt-2 block text-xs text-slate-300">{item.label || item.kind}</span>{item.kind === "chart" && <div className="mt-3 flex h-16 items-end gap-1">{(item.values || [40, 60, 80, 55]).map((value, bar) => <i key={bar} className="flex-1 rounded-t bg-mint/80" style={{ height: `${value}%` }} />)}</div>}</div>);
+  const visualMarkup = (current?.elements || []).map((item, index) => <div key={`${item.kind}-${index}`} className={`absolute rounded-2xl border border-white/10 bg-white/5 p-5 text-center ${item.kind === "chart" ? "right-[5%] top-[24%] h-[46%] w-[43%]" : item.kind === "timeline" || item.kind === "diagram" ? "right-[4%] top-[25%] min-h-[30%] w-[48%]" : "right-[8%] top-[32%] h-28 w-28 rounded-full"}`}><span className="block text-3xl font-black text-mint">{item.kind === "chart" ? "▥" : item.kind === "timeline" ? "→" : item.kind === "diagram" ? "◇" : "✦"}</span><span className="mt-3 block text-sm font-semibold text-slate-200">{item.label || item.kind}</span>{(item.kind === "timeline" || item.kind === "diagram") && <div className="mt-5 flex items-center justify-center gap-2">{(item.items || [item.label || item.kind]).map((value, node) => <span key={node} className="rounded-lg border border-mint/60 px-3 py-2 text-xs text-slate-200">{value}{node < (item.items || []).length - 1 ? " →" : ""}</span>)}</div>}{item.kind === "chart" && <div className="mt-4 flex h-24 items-end gap-2">{(item.values || [40, 60, 80, 55]).map((value, bar) => <i key={bar} className="flex-1 rounded-t bg-mint/80" style={{ height: `${value}%` }} />)}</div>}</div>);
   const download = async (format: "pptx" | "pdf") => {
     if (!deck) return;
     const response = await fetch(`/api/export/${format}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(deck) });

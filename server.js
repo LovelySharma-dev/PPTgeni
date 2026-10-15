@@ -72,14 +72,17 @@ function localDeck(prompt, theme = "midnight") {
 function normalizeVisual(element, theme) {
   if (!element || typeof element !== "object") return null;
   const kind = ["chart", "diagram", "timeline", "shape", "image", "text", "divider"].includes(element.kind) ? element.kind : "shape";
+  const defaults = kind === "chart" || kind === "diagram" || kind === "timeline"
+    ? { x: 49, y: 27, w: 45, h: 39 }
+    : { x: 56, y: 28, w: 34, h: 24 };
   const visual = {
     ...element,
     kind,
     label: String(element.label || (kind === "chart" ? "Supporting data" : "Key idea")).slice(0, 120),
-    x: Math.min(Math.max(Number(element.x) || 56, 4), 88),
-    y: Math.min(Math.max(Number(element.y) || 28, 8), 78),
-    w: Math.min(Math.max(Number(element.w) || 34, 10), 48),
-    h: Math.min(Math.max(Number(element.h) || 24, 10), 48),
+    x: Math.min(Math.max(Number(element.x) || defaults.x, 4), 88),
+    y: Math.min(Math.max(Number(element.y) || defaults.y, 8), 78),
+    w: Math.min(Math.max(Number(element.w) || defaults.w, 18), 52),
+    h: Math.min(Math.max(Number(element.h) || defaults.h, 18), 52),
     color: typeof element.color === "string" ? element.color : `#${theme.accent}`
   };
   if (kind === "chart") visual.values = Array.isArray(element.values) && element.values.length ? element.values.slice(0, 8).map((value) => Math.max(0, Number(value) || 0)) : [42, 68, 55, 84];
@@ -210,10 +213,15 @@ app.post("/api/export/pptx", async (req, res) => {
         if (element.kind === "divider") page.addShape("line", { x, y, w, h: 0, line: { color: (element.color || theme.accent).replace("#", ""), width: 2 } });
         if (element.kind === "image" && /^https?:\/\//i.test(element.src || "")) page.addImage({ path: element.src, x, y, w, h });
         if (element.kind === "chart") page.addChart("bar", [{ name: element.label || "Data", labels: ["A", "B", "C", "D"], values: element.values || [42, 68, 55, 84] }], { x, y, w, h, catAxisLabelFontFace: "Aptos", showLegend: false, chartColors: [theme.accent.replace("#", "")] });
-        if (element.kind === "diagram" || element.kind === "timeline") {
-          page.addText(element.label || element.kind, { x, y, w, h: 0.35, color: theme.accent.replace("#", ""), bold: true, align: "center", margin: 0.02, fit: "shrink" });
-          (element.items || []).forEach((item, index) => page.addText(String(item), { x: x + (w / Math.max(element.items.length, 1)) * index, y: y + 0.5, w: w / Math.max(element.items.length, 1) - 0.08, h: Math.max(h - 0.6, 0.35), color: theme.text.replace("#", ""), align: "center", valign: "mid", margin: 0.06, fill: { color: theme.surface.replace("#", "") }, line: { color: theme.accent.replace("#", ""), width: 1 }, fit: "shrink" }));
-        }
+          if (element.kind === "diagram" || element.kind === "timeline") {
+            const items = element.items || [element.label || element.kind];
+            page.addText(element.label || element.kind, { x, y, w, h: 0.35, color: theme.accent.replace("#", ""), bold: true, align: "center", margin: 0.02, fit: "shrink" });
+            items.forEach((item, index) => {
+              const itemW = w / Math.max(items.length, 1);
+              page.addText(String(item), { x: x + itemW * index, y: y + 0.5, w: itemW - 0.08, h: Math.max(h - 0.6, 0.35), fontSize: 14, color: theme.text.replace("#", ""), align: "center", valign: "mid", margin: 0.08, fill: { color: theme.surface.replace("#", "") }, line: { color: theme.accent.replace("#", ""), width: 1 }, fit: "shrink" });
+              if (index < items.length - 1) page.addText("→", { x: x + itemW * (index + 1) - 0.12, y: y + h / 2, w: 0.24, h: 0.25, fontSize: 16, bold: true, color: theme.accent.replace("#", ""), margin: 0, align: "center" });
+            });
+          }
       }
       page.addText(`${String(deck.slides.indexOf(slide) + 1).padStart(2, "0")}`, { x: 11.9, y: 6.8, w: 0.5, h: 0.2, fontSize: 9, color: theme.muted, align: "right", margin: 0 });
     }
@@ -236,9 +244,9 @@ app.post("/api/export/pdf", async (req, res) => {
       const y = Number(element.y || 28);
       const w = Number(element.w || 34);
       const h = Number(element.h || 24);
-      const style = `left:${x}%;top:${y}%;width:${w}%;height:${h}%;`;
+        const style = `left:${x}%;top:${y}%;width:${w}%;height:${h}%;`;
       if (element.kind === "chart") return `<div class="visual chart" style="${style}"><div class="bars">${(element.values || [42, 68, 55, 84]).map((value) => `<i style="height:${Math.min(Math.max(Number(value) || 0, 4), 100)}%"></i>`).join("")}</div><small>${escapeHtml(element.label || "Chart")}</small></div>`;
-      if (element.kind === "diagram" || element.kind === "timeline") return `<div class="visual flow" style="${style}"><strong>${escapeHtml(element.label || element.kind)}</strong><div class="nodes">${(element.items || []).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div></div>`;
+      if (element.kind === "diagram" || element.kind === "timeline") return `<div class="visual flow" style="${style}"><strong>${escapeHtml(element.label || element.kind)}</strong><div class="nodes">${(element.items || [element.label || element.kind]).map((item, index, items) => `<span>${escapeHtml(item)}</span>${index < items.length - 1 ? "<b>→</b>" : ""}`).join("")}</div></div>`;
       if (element.kind === "text") return `<div class="visual text-visual" style="${style}">${escapeHtml(element.text || element.label || "")}</div>`;
       if (element.kind === "image" && /^https?:\/\//i.test(element.src || "")) return `<img class="visual" style="${style}" src="${escapeHtml(element.src)}" alt="${escapeHtml(element.label || "Slide image")}">`;
       return `<div class="visual shape" style="${style}"><strong>${escapeHtml(element.label || "Key idea")}</strong></div>`;
@@ -248,7 +256,7 @@ app.post("/api/export/pdf", async (req, res) => {
       const bullets = Array.isArray(slide.bullets) ? `<ul>${slide.bullets.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : "";
       return `<section class="slide"><div class="kicker">${escapeHtml(slide.type || "PRESENTATION")}</div><div class="title">${escapeHtml(slide.title || "")}</div><div class="copy">${escapeHtml(slide.subtitle || slide.takeaway || "")}</div><div class="body">${escapeHtml(body).replace(/\n/g, "<br>")}${bullets}</div><div class="visuals">${(slide.elements || []).map(elementHtml).join("")}</div><div class="num">${String(index + 1).padStart(2, "0")}</div></section>`;
     };
-    await page.setContent(`<!doctype html><style>@page{size:13.333in 7.5in;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#${theme.background};color:#${theme.text}}.slide{width:13.333in;height:7.5in;padding:.62in .72in;page-break-after:always;position:relative;overflow:hidden}.kicker{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#${theme.accent};font-weight:bold}.title{margin-top:12px;max-width:68%;font-size:31px;line-height:1.08;font-weight:bold}.copy{margin-top:16px;max-width:62%;font-size:17px;line-height:1.35;color:#${theme.muted}}.body{margin-top:20px;max-width:57%;font-size:16px;line-height:1.38}.body ul{padding-left:20px}.body li{margin:7px 0}.visuals{position:absolute;inset:0}.visual{position:absolute;border-radius:14px;border:1px solid #${theme.accent}55;background:#${theme.surface}dd;color:#${theme.text};padding:14px;z-index:1}.visual small{display:block;margin-top:8px;color:#${theme.muted}}.shape{display:flex;align-items:center;justify-content:center;text-align:center}.flow strong{display:block;color:#${theme.accent};font-size:13px}.nodes{display:flex;gap:7px;align-items:center;justify-content:center;margin-top:14px;flex-wrap:wrap}.nodes span{border:1px solid #${theme.accent}99;border-radius:8px;padding:7px 9px;font-size:11px}.chart{display:flex;flex-direction:column;justify-content:flex-end}.bars{height:80%;display:flex;gap:10px;align-items:flex-end}.bars i{display:block;flex:1;background:#${theme.accent};border-radius:5px 5px 0 0}.text-visual{font-size:16px}.num{position:absolute;right:.7in;bottom:.35in;color:#${theme.muted};font-size:10px}</style>${slides.map(slideHtml).join("")}`, { waitUntil: "load" });
+    await page.setContent(`<!doctype html><style>@page{size:13.333in 7.5in;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#${theme.background};color:#${theme.text}}.slide{width:13.333in;height:7.5in;padding:.62in .72in;page-break-after:always;position:relative;overflow:hidden}.kicker{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#${theme.accent};font-weight:bold}.title{margin-top:12px;max-width:68%;font-size:31px;line-height:1.08;font-weight:bold}.copy{margin-top:16px;max-width:62%;font-size:17px;line-height:1.35;color:#${theme.muted}}.body{margin-top:20px;max-width:57%;font-size:16px;line-height:1.38}.body ul{padding-left:20px}.body li{margin:7px 0}.visuals{position:absolute;inset:0}.visual{position:absolute;border-radius:14px;border:1px solid #${theme.accent}55;background:#${theme.surface}dd;color:#${theme.text};padding:18px;z-index:1}.visual small{display:block;margin-top:10px;color:#${theme.muted};font-size:13px}.shape{display:flex;align-items:center;justify-content:center;text-align:center;font-size:18px}.flow strong{display:block;color:#${theme.accent};font-size:15px;text-align:center}.nodes{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:18px;flex-wrap:nowrap}.nodes span{border:1px solid #${theme.accent}99;border-radius:8px;padding:12px 10px;font-size:14px;text-align:center;min-width:72px}.nodes b{color:#${theme.accent};font-size:20px}.chart{display:flex;flex-direction:column;justify-content:flex-end}.bars{height:80%;display:flex;gap:12px;align-items:flex-end}.bars i{display:block;flex:1;background:#${theme.accent};border-radius:5px 5px 0 0}.text-visual{font-size:16px}.num{position:absolute;right:.7in;bottom:.35in;color:#${theme.muted};font-size:10px}</style>${slides.map(slideHtml).join("")}`, { waitUntil: "load" });
     await page.evaluate(() => document.fonts?.ready);
     await page.pdf({ path: path.join(exportsDir, filename), printBackground: true, width: "13.333in", height: "7.5in", pageRanges: "1-" });
     await browser.close();
