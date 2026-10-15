@@ -21,9 +21,9 @@ natural-language brief
         ↓
 story + slide plan
         ↓
-trusted slide JSON
+trusted slide JSON + system-side visual enrichment
         ↓
-live editor → PPTX / PDF / Google Slides handoff
+live editor → editable PPTX / PDF
 ```
 
 It is designed for technical demos, hackathons, startup pitches, research talks, project reviews, and fast iteration before a deadline.
@@ -37,7 +37,7 @@ It is designed for technical demos, hackathons, startup pitches, research talks,
 | Design | Hackathon neon, terminal green, demo day, electric blue, academic, editorial, and dark themes |
 | Build | Add text blocks, shapes, dividers, charts, image URLs, and video placeholders |
 | Export | Editable `.pptx` via PptxGenJS and presentation PDF via Puppeteer |
-| Share | Google Slides handoff button and Render deployment blueprint |
+| Share | Render deployment blueprint |
 | Safety | Server-side AI keys, trusted slide data, sanitized provider diagnostics |
 
 ## 🎬 See it in action
@@ -66,7 +66,7 @@ Hugging Face fallback
 deterministic local generator
 ```
 
-The landing page loads OpenRouter's current zero-price catalog from `/api/models`, prioritizes DeepSeek free variants, and keeps compatibility entries for common `:free` models.
+The landing page loads OpenRouter's current zero-price catalog from `/api/models`. Generation only tries models present in that live catalog; if the selected model disappears, the server tries another current free model before using the deterministic local generator. Model responses may contain only the story—the server validates and adds safe editable visuals before the deck reaches the editor.
 
 Create `.env` locally from `.env.example`. Never commit it:
 
@@ -81,12 +81,11 @@ AI_MODEL=openrouter/free
 ```mermaid
 flowchart LR
   A[Prompt] --> B[Express API]
-  B --> C[OpenRouter / HF]
-  C --> D[Validated slide JSON]
+  B -->   C[OpenRouter live free catalog]
+  C --> D[Validated slide JSON + enriched visuals]
   D --> E[Vanilla JS editor]
   E --> F[PptxGenJS]
   E --> G[Puppeteer PDF]
-  E --> H[Google Slides handoff]
 ```
 
 The model never supplies executable browser JavaScript. It returns data; trusted components render that data. This makes the editor easier to validate and keeps export behavior deterministic.

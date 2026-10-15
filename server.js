@@ -30,14 +30,7 @@ const themes = {
   electric: { name: "Electric blue", background: "07152E", surface: "102A54", text: "F1F7FF", muted: "A5C3EA", accent: "38BDF8" }
 };
 
-const freeModelFallback = [
-  { id: "openrouter/free", name: "OpenRouter Free Router", provider: "OpenRouter" },
-  { id: "deepseek/deepseek-r1:free", name: "DeepSeek R1 (free)", provider: "DeepSeek" },
-  { id: "deepseek/deepseek-chat:free", name: "DeepSeek Chat (free)", provider: "DeepSeek" },
-  { id: "google/gemini-2.0-flash-exp:free", name: "Gemini 2.0 Flash Experimental (free)", provider: "Google" },
-  { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B Instruct (free)", provider: "Meta" },
-  { id: "qwen/qwen-2.5-coder-32b-instruct:free", name: "Qwen 2.5 Coder 32B (free)", provider: "Qwen" }
-];
+const openRouterModelsUrl = "https://openrouter.ai/api/v1/models";
 
 function parsePrompt(prompt) {
   const text = String(prompt || "").trim();
@@ -63,13 +56,66 @@ function localDeck(prompt, theme = "midnight") {
   return { title: spec.topic, theme, themeConfig: t, spec, slides: slides.slice(0, spec.slideCount) };
 }
 
+function normalizeVisual(element, theme) {
+  if (!element || typeof element !== "object") return null;
+  const kind = ["chart", "diagram", "timeline", "shape", "image", "text", "divider"].includes(element.kind) ? element.kind : "shape";
+  const visual = {
+    ...element,
+    kind,
+    label: String(element.label || (kind === "chart" ? "Supporting data" : "Key idea")).slice(0, 120),
+    x: Math.min(Math.max(Number(element.x) || 56, 4), 88),
+    y: Math.min(Math.max(Number(element.y) || 28, 8), 78),
+    w: Math.min(Math.max(Number(element.w) || 34, 10), 48),
+    h: Math.min(Math.max(Number(element.h) || 24, 10), 48),
+    color: typeof element.color === "string" ? element.color : `#${theme.accent}`
+  };
+  if (kind === "chart") visual.values = Array.isArray(element.values) && element.values.length ? element.values.slice(0, 8).map((value) => Math.max(0, Number(value) || 0)) : [42, 68, 55, 84];
+  if (kind === "shape") visual.shape = element.shape === "circle" ? "circle" : "rounded";
+  if (kind === "text") visual.text = String(element.text || visual.label).slice(0, 240);
+  if (kind === "image" && !/^https?:\/\//i.test(element.src || "")) return null;
+  return visual;
+}
+
+function normalizeDeck(deck, prompt, theme) {
+  const themeConfig = themes[theme] || themes.midnight;
+  const slides = Array.isArray(deck?.slides) ? deck.slides : [];
+  if (!slides.length) return { ...localDeck(prompt, theme), generationSource: "local fallback" };
+  return {
+    ...deck,
+    title: String(deck.title || parsePrompt(prompt).topic).slice(0, 160),
+    theme,
+    themeConfig,
+    spec: parsePrompt(prompt),
+    slides: slides.map((slide, index) => {
+      const elements = (Array.isArray(slide.elements) ? slide.elements : []).map((element) => normalizeVisual(element, themeConfig)).filter(Boolean);
+      if (!elements.length) elements.push(normalizeVisual({ kind: index % 2 ? "chart" : "shape", label: "System-enriched visual" }, themeConfig));
+      return { ...slide, title: String(slide.title || `Slide ${index + 1}`).slice(0, 160), elements };
+    })
+  };
+}
+
+async function fetchFreeModels() {
+  const response = await fetch(openRouterModelsUrl);
+  if (!response.ok) throw new Error(`OpenRouter returned ${response.status}`);
+  const data = await response.json();
+  return (data.data || [])
+    .filter((model) => model.id === "openrouter/free" || model.id.endsWith(":free"))
+    .map((model) => ({ id: model.id, name: model.name || model.id, provider: model.id.split("/")[0] }))
+    .sort((a, b) => a.id === "openrouter/free" ? -1 : b.id === "openrouter/free" ? 1 : a.name.localeCompare(b.name));
+}
+
 async function generateDeck(prompt, theme, requestedModel) {
-  const providers = [
-    { name: "OpenRouter free provider", url: process.env.AI_API_URL, key: process.env.AI_API_KEY, model: requestedModel === "openrouter/free" || requestedModel?.endsWith(":free") ? requestedModel : "openrouter/free" }
-  ].filter((provider) => provider.url && provider.key && provider.model);
-  if (!providers.length) return { ...localDeck(prompt, theme), generationSource: "local fallback" };
+  if (!process.env.AI_API_URL || !process.env.AI_API_KEY) return { ...localDeck(prompt, theme), generationSource: "local fallback" };
+  let availableModels = [];
+  let catalogFailed = false;
+  try { availableModels = await fetchFreeModels(); } catch (error) { catalogFailed = true; console.warn(`Could not refresh OpenRouter free models: ${error.message}`); }
+  const selected = availableModels.some((model) => model.id === requestedModel) ? requestedModel : availableModels[0]?.id;
+  const candidates = availableModels
+    .sort((a, b) => Number(b.id === selected) - Number(a.id === selected))
+    .map((model) => ({ name: `${model.provider} free model`, model: model.id }));
+  if (!candidates.length && catalogFailed) candidates.push({ name: "OpenRouter free router", model: "openrouter/free" });
   const failures = [];
-  for (const provider of providers) {
+  for (const provider of candidates) {
     try {
       const headers = {
         "content-type": "application/json",
@@ -96,8 +142,8 @@ async function generateDeck(prompt, theme, requestedModel) {
       const content = Array.isArray(rawContent) ? rawContent.map((part) => part.text || "").join("") : rawContent;
       if (!content) throw new Error("returned no content");
       const parsed = JSON.parse(content.replace(/^```json\s*|\s*```$/g, ""));
-      if (!parsed || !Array.isArray(parsed.slides) || parsed.slides.length < 1 || parsed.slides.some((item) => !item.title || !Array.isArray(item.elements) || item.elements.length < 1)) throw new Error("returned invalid slide structure or missing visuals");
-      return { ...parsed, theme, themeConfig: themes[theme] || themes.midnight, spec: parsePrompt(prompt), generationSource: provider.name };
+      if (!parsed || !Array.isArray(parsed.slides) || parsed.slides.length < 1 || parsed.slides.some((item) => !item.title)) throw new Error("returned invalid slide structure");
+      return { ...normalizeDeck(parsed, prompt, theme), model: provider.model, generationSource: provider.name };
     } catch (error) {
       failures.push(`${provider.name}: ${error.message}`);
     }
@@ -109,18 +155,10 @@ async function generateDeck(prompt, theme, requestedModel) {
 app.get("/api/themes", (_req, res) => res.json(Object.entries(themes).map(([id, value]) => ({ id, ...value }))));
 app.get("/api/models", async (_req, res) => {
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/models");
-    if (!response.ok) throw new Error(`OpenRouter returned ${response.status}`);
-    const data = await response.json();
-    const models = (data.data || [])
-      .filter((model) => model.id === "openrouter/free" || model.id.endsWith(":free"))
-      .map((model) => ({ id: model.id, name: model.name || model.id, provider: model.id.split("/")[0] }))
-      .sort((a, b) => `${b.id.toLowerCase().includes("deepseek")}${a.name}`.localeCompare(`${a.id.toLowerCase().includes("deepseek")}${b.name}`));
-    const known = new Set(models.map((model) => model.id));
-    res.json([...models, ...freeModelFallback.filter((model) => !known.has(model.id))]);
+    res.json(await fetchFreeModels());
   } catch (error) {
     console.warn(`Could not load OpenRouter free models: ${error.message}`);
-    res.json(freeModelFallback);
+    res.json([{ id: "openrouter/free", name: "OpenRouter Free Router", provider: "OpenRouter" }]);
   }
 });
 app.post("/api/generate", async (req, res) => {
