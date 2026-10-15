@@ -28,6 +28,15 @@ const themes = {
   electric: { name: "Electric blue", background: "07152E", surface: "102A54", text: "F1F7FF", muted: "A5C3EA", accent: "38BDF8" }
 };
 
+const freeModelFallback = [
+  { id: "openrouter/free", name: "OpenRouter Free Router", provider: "OpenRouter" },
+  { id: "deepseek/deepseek-r1:free", name: "DeepSeek R1 (free)", provider: "DeepSeek" },
+  { id: "deepseek/deepseek-chat:free", name: "DeepSeek Chat (free)", provider: "DeepSeek" },
+  { id: "google/gemini-2.0-flash-exp:free", name: "Gemini 2.0 Flash Experimental (free)", provider: "Google" },
+  { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B Instruct (free)", provider: "Meta" },
+  { id: "qwen/qwen-2.5-coder-32b-instruct:free", name: "Qwen 2.5 Coder 32B (free)", provider: "Qwen" }
+];
+
 function parsePrompt(prompt) {
   const text = String(prompt || "").trim();
   const count = Number(text.match(/(\d+)\s*(?:-|\s)?\s*slide/i)?.[1]) || 8;
@@ -52,9 +61,9 @@ function localDeck(prompt, theme = "midnight") {
   return { title: spec.topic, theme, themeConfig: t, spec, slides: slides.slice(0, spec.slideCount) };
 }
 
-async function generateDeck(prompt, theme) {
+async function generateDeck(prompt, theme, requestedModel) {
   const providers = [
-    { name: "primary AI provider", url: process.env.AI_API_URL, key: process.env.AI_API_KEY, model: process.env.AI_MODEL || (process.env.AI_API_URL?.includes("openrouter.ai") ? "openai/gpt-4o-mini" : "") },
+    { name: "primary AI provider", url: process.env.AI_API_URL, key: process.env.AI_API_KEY, model: requestedModel || process.env.AI_MODEL || (process.env.AI_API_URL?.includes("openrouter.ai") ? "openrouter/free" : "") },
     { name: "Hugging Face fallback", url: process.env.AI_FALLBACK_API_URL, key: process.env.AI_FALLBACK_API_KEY, model: process.env.AI_FALLBACK_MODEL }
   ].filter((provider) => provider.url && provider.key && provider.model);
   if (!providers.length) return localDeck(prompt, theme);
@@ -96,10 +105,26 @@ async function generateDeck(prompt, theme) {
 }
 
 app.get("/api/themes", (_req, res) => res.json(Object.entries(themes).map(([id, value]) => ({ id, ...value }))));
+app.get("/api/models", async (_req, res) => {
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/models");
+    if (!response.ok) throw new Error(`OpenRouter returned ${response.status}`);
+    const data = await response.json();
+    const models = (data.data || [])
+      .filter((model) => model.id.endsWith(":free") || (Number(model.pricing?.prompt) === 0 && Number(model.pricing?.completion) === 0))
+      .map((model) => ({ id: model.id, name: model.name || model.id, provider: model.id.split("/")[0] }))
+      .sort((a, b) => `${b.id.toLowerCase().includes("deepseek")}${a.name}`.localeCompare(`${a.id.toLowerCase().includes("deepseek")}${b.name}`));
+    const known = new Set(models.map((model) => model.id));
+    res.json([...models, ...freeModelFallback.filter((model) => !known.has(model.id))]);
+  } catch (error) {
+    console.warn(`Could not load OpenRouter free models: ${error.message}`);
+    res.json(freeModelFallback);
+  }
+});
 app.post("/api/generate", async (req, res) => {
   try {
     if (!req.body?.prompt?.trim()) return res.status(400).json({ error: "A presentation prompt is required." });
-    res.json(await generateDeck(req.body.prompt, req.body.theme));
+    res.json(await generateDeck(req.body.prompt, req.body.theme, req.body.model));
   } catch (error) {
     res.status(502).json({ error: error.message });
   }

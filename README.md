@@ -38,3 +38,7 @@ Render supplies `PORT` automatically. The service starts with `npm start`.
 - Basic quality checks for slide count and text density
 
 The larger roadmap in the product specification—uploads, research citations, collaboration, reference-template matching, and advanced QA—should be added as separate modules after this end-to-end core is stable.
+
+## Free OpenRouter models
+
+The generator loads the current zero-price models from OpenRouter at `/api/models`, including every active `:free` model returned by the catalog. It also keeps a small compatibility list containing the OpenRouter free router, DeepSeek free variants, Gemini Flash Experimental, Llama Instruct, and Qwen Coder so those choices remain visible when a provider temporarily omits them. Select the model from the landing page before generating a deck.

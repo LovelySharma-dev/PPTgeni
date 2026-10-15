@@ -3,6 +3,7 @@ let deck = null;
 let selected = 0;
 let history = [];
 let future = [];
+let models = [];
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));
 const slide = () => deck.slides[selected];
@@ -24,6 +25,7 @@ const render = () => {
   document.documentElement.style.setProperty("--accent", `#${theme.accent}`);
   $("#deckTitle").textContent = deck.title || "Untitled presentation";
   $("#theme").value = deck.theme;
+  $("#model").value = deck.model || $("#model").value;
   $("#fontFamily").value = deck.font || "Aptos";
   $("#slideTitle").value = current.title || "";
   $("#slideTakeaway").value = current.takeaway || current.subtitle || "";
@@ -46,13 +48,20 @@ const loadThemes = async () => {
   const themes = await fetch("/api/themes").then((response) => response.json());
   $("#theme").innerHTML = themes.map((theme) => `<option value="${theme.id}">${theme.name}</option>`).join("");
 };
+const loadModels = async () => {
+  models = await fetch("/api/models").then((response) => response.json());
+  $("#model").innerHTML = models.map((model) => `<option value="${escapeHtml(model.id)}">${escapeHtml(model.name)} · ${escapeHtml(model.provider)}</option>`).join("");
+  const preferred = models.find((model) => model.id.includes("deepseek")) || models[0];
+  if (preferred) $("#model").value = preferred.id;
+};
 
 const createDeck = async () => {
   const prompt = $("#prompt").value.trim();
   if (!prompt) return $("#prompt").focus();
   $("#generate").disabled = true; $("#generate").innerHTML = "Building your story…";
   try {
-    deck = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt, theme: "midnight" }) }).then(async (response) => { const value = await response.json(); if (!response.ok) throw new Error(value.error); return value; });
+    deck = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt, theme: "midnight", model: $("#model").value }) }).then(async (response) => { const value = await response.json(); if (!response.ok) throw new Error(value.error); return value; });
+    deck.model = $("#model").value;
     deck.font = "Aptos"; deck.slides.forEach((item) => { item.elements = []; });
     selected = 0; history = []; future = []; $("#welcome").classList.add("hidden"); $("#studio").classList.remove("hidden"); render();
   } catch (error) { alert(error.message); } finally { $("#generate").disabled = false; $("#generate").innerHTML = "Generate outline <span>→</span>"; }
@@ -88,3 +97,4 @@ $("#exportPptx").addEventListener("click", () => download("pptx"));
 $("#exportPdf").addEventListener("click", () => download("pdf"));
 $("#openSlides").addEventListener("click", () => window.open("https://slides.google.com/create", "_blank", "noopener,noreferrer"));
 loadThemes();
+loadModels();
