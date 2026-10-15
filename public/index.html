@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PPTgeni — Presentation studio</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="/"><span class="brand-mark">✦</span>PPTgeni</a><span class="status">AI presentation studio</span><div class="toolbar"><button id="undo" class="icon-button" disabled>↶</button><button id="redo" class="icon-button" disabled>↷</button><button id="exportPptx" class="secondary" disabled>Export PPTX</button><button id="exportPdf" class="primary" disabled>Export PDF</button></div></header>
+  <main class="app-shell">
+    <section id="welcome" class="welcome"><div class="eyebrow">FROM PROMPT TO POLISHED DECK</div><h1>Make your next idea<br><em>impossible to miss.</em></h1><p>Turn a rough brief into a structured, editable presentation with a clear story, confident design, and reliable exports.</p><div class="prompt-card"><textarea id="prompt" aria-label="Presentation prompt" placeholder="Create a 10-slide academic presentation on Responsible AI for a university research seminar..."></textarea><div class="prompt-actions"><div class="examples"><button data-example="Create an 8-slide startup pitch for an AI-powered study companion">Startup pitch</button><button data-example="Create a 10-slide academic presentation on Responsible AI">Academic talk</button><button data-example="Create a 7-slide project report on our Q3 product launch">Project report</button></div><button id="generate" class="primary large">Generate outline <span>→</span></button></div></div></section>
+    <section id="studio" class="studio hidden"><aside class="sidebar"><div class="side-heading"><span>YOUR DECK</span><button id="newDeck">＋</button></div><div id="thumbnails" class="thumbnails"></div><div class="quality"><div class="quality-title"><span class="dot"></span>Quality check</div><p id="qualityText">Generate a deck to inspect layout and content.</p></div></aside><section class="workspace"><div class="workspace-head"><div><div class="eyebrow">EDITING STUDIO</div><h2 id="deckTitle">Your presentation</h2></div><select id="theme" aria-label="Presentation theme"></select></div><div class="canvas-wrap"><div id="canvas" class="canvas"></div></div><div class="assistant"><span class="spark">✦</span><input id="editPrompt" placeholder="Ask AI to improve this deck, e.g. “Make slide 3 more visual”"><button id="applyEdit">Apply</button></div></section><aside class="inspector"><div class="side-heading"><span>SLIDE DETAILS</span></div><label>Title<input id="slideTitle"></label><label>Takeaway<textarea id="slideTakeaway"></textarea></label><label>Body<textarea id="slideBody"></textarea></label><button id="saveSlide" class="primary full">Save slide</button></aside></section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
