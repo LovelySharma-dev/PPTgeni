@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import next from "next";
 import PptxGenJS from "pptxgenjs";
 import puppeteer from "puppeteer";
 import { randomUUID } from "node:crypto";
@@ -10,12 +11,13 @@ import { fileURLToPath } from "node:url";
 dotenv.config();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+const nextApp = next({ dev: process.env.NODE_ENV !== "production" });
+const nextHandler = nextApp.getRequestHandler();
 const port = Number(process.env.PORT || 3000);
 const exportsDir = path.join(__dirname, "exports");
 await mkdir(exportsDir, { recursive: true });
 
 app.use(express.json({ limit: "1mb" }));
-app.use(express.static(path.join(__dirname, "public")));
 
 const themes = {
   midnight: { name: "Premium dark", background: "101827", surface: "172338", text: "F8FAFC", muted: "A8B7CF", accent: "5EEAD4" },
@@ -78,14 +80,14 @@ async function generateDeck(prompt, theme, requestedModel) {
         headers["HTTP-Referer"] = process.env.APP_URL || "http://localhost:3000";
         headers["X-Title"] = "PPTgeni";
       }
-      const response = await fetch(provider.url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ model: provider.model, temperature: 0.4, response_format: { type: "json_object" }, messages: [
+      const requestBody = (useJsonMode) => ({ model: provider.model, temperature: 0.4, ...(useJsonMode ? { response_format: { type: "json_object" } } : {}), messages: [
       { role: "system", content: "Return only valid JSON matching {title,slides}. Each slide has type,title and concise presentation-ready fields. Use types title,statement,comparison,process,metrics,quote,closing." },
       { role: "user", content: prompt }
-        ] })
-      });
+        ] });
+      let response = await fetch(provider.url, { method: "POST", headers, body: JSON.stringify(requestBody(true)) });
+      if (!response.ok && [400, 404, 422].includes(response.status)) {
+        response = await fetch(provider.url, { method: "POST", headers, body: JSON.stringify(requestBody(false)) });
+      }
       if (!response.ok) {
         const providerMessage = (await response.text()).replace(/\b(sk|hf|or-v1)_[A-Za-z0-9_-]+/g, "[redacted]").slice(0, 240);
         throw new Error(`returned ${response.status}${providerMessage ? `: ${providerMessage}` : ""}`);
@@ -95,13 +97,14 @@ async function generateDeck(prompt, theme, requestedModel) {
       const content = Array.isArray(rawContent) ? rawContent.map((part) => part.text || "").join("") : rawContent;
       if (!content) throw new Error("returned no content");
       const parsed = JSON.parse(content.replace(/^```json\s*|\s*```$/g, ""));
-      return { ...parsed, theme, themeConfig: themes[theme] || themes.midnight, spec: parsePrompt(prompt) };
+      if (!parsed || !Array.isArray(parsed.slides) || parsed.slides.length < 1 || parsed.slides.some((item) => !item.title)) throw new Error("returned invalid slide structure");
+      return { ...parsed, theme, themeConfig: themes[theme] || themes.midnight, spec: parsePrompt(prompt), generationSource: provider.name };
     } catch (error) {
       failures.push(`${provider.name}: ${error.message}`);
     }
   }
   console.warn(`AI providers failed; using local generator. ${failures.join("; ")}`);
-  return localDeck(prompt, theme);
+  return { ...localDeck(prompt, theme), generationSource: "local fallback" };
 }
 
 app.get("/api/themes", (_req, res) => res.json(Object.entries(themes).map(([id, value]) => ({ id, ...value }))));
@@ -182,4 +185,6 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[character]));
 }
 
+await nextApp.prepare();
+app.all("*", (req, res) => nextHandler(req, res));
 app.listen(port, () => console.log(`PPTgeni running at http://localhost:${port}`));
