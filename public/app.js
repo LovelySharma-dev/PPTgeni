@@ -38,7 +38,7 @@ const render = () => {
   $("#elementList").innerHTML = (current.elements || []).map((item, index) => `<button class="element-chip" data-element="${index}">${item.kind} <span>×</span></button>`).join("");
   document.querySelectorAll(".element-chip").forEach((button) => button.addEventListener("click", () => { saveState(); current.elements.splice(Number(button.dataset.element), 1); render(); }));
   $("#qualityText").textContent = `${deck.slides.length} slides · ${(current.elements || []).length} visual elements · ${(current.body || "").length > 260 ? "Review dense text" : "Readable density"}`;
-  $("#exportPptx").disabled = $("#exportPdf").disabled = false;
+  $("#exportPptx").disabled = $("#exportPdf").disabled = $("#openSlides").disabled = false;
   $("#undo").disabled = !history.length; $("#redo").disabled = !future.length;
 };
 
@@ -86,4 +86,5 @@ $("#redo").addEventListener("click", () => { if (!future.length) return; history
 const download = async (format) => { const response = await fetch(`/api/export/${format}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(deck) }); if (!response.ok) return alert((await response.json()).error); const blob = await response.blob(); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `pptgeni-presentation.${format}`; link.click(); URL.revokeObjectURL(link.href); };
 $("#exportPptx").addEventListener("click", () => download("pptx"));
 $("#exportPdf").addEventListener("click", () => download("pdf"));
+$("#openSlides").addEventListener("click", () => window.open("https://slides.google.com/create", "_blank", "noopener,noreferrer"));
 loadThemes();

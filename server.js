@@ -21,7 +21,11 @@ const themes = {
   midnight: { name: "Premium dark", background: "101827", surface: "172338", text: "F8FAFC", muted: "A8B7CF", accent: "5EEAD4" },
   paper: { name: "Minimal academic", background: "F7F5F0", surface: "FFFFFF", text: "172033", muted: "5E687A", accent: "2457D6" },
   coral: { name: "Editorial", background: "FFF7F3", surface: "FFFFFF", text: "2D1B28", muted: "826675", accent: "E56B5D" },
-  cobalt: { name: "Startup pitch", background: "EEF4FF", surface: "FFFFFF", text: "10234F", muted: "58709E", accent: "3B5BDB" }
+  cobalt: { name: "Startup pitch", background: "EEF4FF", surface: "FFFFFF", text: "10234F", muted: "58709E", accent: "3B5BDB" },
+  hackathon: { name: "Hackathon neon", background: "0B1020", surface: "151D35", text: "F7FAFF", muted: "AAB8D5", accent: "A78BFA" },
+  terminal: { name: "Terminal green", background: "07120F", surface: "10231C", text: "E7FFF4", muted: "9AC7B0", accent: "48E39A" },
+  sunrise: { name: "Demo day", background: "FFF4E6", surface: "FFFFFF", text: "29180E", muted: "8A6048", accent: "FF6B35" },
+  electric: { name: "Electric blue", background: "07152E", surface: "102A54", text: "F1F7FF", muted: "A5C3EA", accent: "38BDF8" }
 };
 
 function parsePrompt(prompt) {
@@ -50,7 +54,7 @@ function localDeck(prompt, theme = "midnight") {
 
 async function generateDeck(prompt, theme) {
   const providers = [
-    { name: "primary AI provider", url: process.env.AI_API_URL, key: process.env.AI_API_KEY, model: process.env.AI_MODEL },
+    { name: "primary AI provider", url: process.env.AI_API_URL, key: process.env.AI_API_KEY, model: process.env.AI_MODEL || (process.env.AI_API_URL?.includes("openrouter.ai") ? "openai/gpt-4o-mini" : "") },
     { name: "Hugging Face fallback", url: process.env.AI_FALLBACK_API_URL, key: process.env.AI_FALLBACK_API_KEY, model: process.env.AI_FALLBACK_MODEL }
   ].filter((provider) => provider.url && provider.key && provider.model);
   if (!providers.length) return localDeck(prompt, theme);
@@ -68,7 +72,7 @@ async function generateDeck(prompt, theme) {
       const response = await fetch(provider.url, {
         method: "POST",
         headers,
-        body: JSON.stringify({ model: provider.model, temperature: 0.4, messages: [
+        body: JSON.stringify({ model: provider.model, temperature: 0.4, response_format: { type: "json_object" }, messages: [
       { role: "system", content: "Return only valid JSON matching {title,slides}. Each slide has type,title and concise presentation-ready fields. Use types title,statement,comparison,process,metrics,quote,closing." },
       { role: "user", content: prompt }
         ] })
@@ -78,7 +82,8 @@ async function generateDeck(prompt, theme) {
         throw new Error(`returned ${response.status}${providerMessage ? `: ${providerMessage}` : ""}`);
       }
       const data = await response.json();
-      const content = data.choices?.[0]?.message?.content;
+      const rawContent = data.choices?.[0]?.message?.content;
+      const content = Array.isArray(rawContent) ? rawContent.map((part) => part.text || "").join("") : rawContent;
       if (!content) throw new Error("returned no content");
       const parsed = JSON.parse(content.replace(/^```json\s*|\s*```$/g, ""));
       return { ...parsed, theme, themeConfig: themes[theme] || themes.midnight, spec: parsePrompt(prompt) };
