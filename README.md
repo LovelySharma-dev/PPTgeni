@@ -1,44 +1,126 @@
-# PPTgeni
+<div align="center">
+  <img src="assets/pptgeni-banner.svg" alt="PPTgeni animated banner" width="100%">
 
-PPTgeni is a local-first AI presentation studio. It turns a natural-language brief into a structured deck, renders an editable browser preview, supports slide-level edits and themes, and exports real PPTX and PDF files.
+  <h1>✦ PPTgeni</h1>
+  <p><strong>From a rough idea to a presentation people remember.</strong></p>
+  <p>AI-assisted storytelling, hackathon-ready themes, editable slide structure, and real PPTX/PDF exports.</p>
 
-## Run locally
+  <p>
+    <a href="https://github.com/LovelySharma-dev/PPTgeni"><img src="https://img.shields.io/badge/status-building-5eead4?style=for-the-badge&labelColor=101827" alt="Status: building"></a>
+    <a href="https://github.com/LovelySharma-dev/PPTgeni/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-a78bfa?style=for-the-badge&labelColor=101827" alt="MIT license"></a>
+    <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-20%2B-48e39a?style=for-the-badge&labelColor=101827" alt="Node.js 20 or newer"></a>
+  </p>
+</div>
 
-```bash
+## Why PPTgeni?
+
+Most prompt-to-slide tools produce a wall of text or a flat image. PPTgeni treats a deck as a **structured, editable story**:
+
+```text
+natural-language brief
+        ↓
+story + slide plan
+        ↓
+trusted slide JSON
+        ↓
+live editor → PPTX / PDF / Google Slides handoff
+```
+
+It is designed for technical demos, hackathons, startup pitches, research talks, project reviews, and fast iteration before a deadline.
+
+## ✨ What you can do
+
+| Area | Included |
+| --- | --- |
+| Generate | Prompt-to-deck generation with OpenRouter free models, DeepSeek choices, and local fallback |
+| Edit | Slide selection, title/body editing, add/remove slides, undo/redo |
+| Design | Hackathon neon, terminal green, demo day, electric blue, academic, editorial, and dark themes |
+| Build | Add text blocks, shapes, dividers, charts, image URLs, and video placeholders |
+| Export | Editable `.pptx` via PptxGenJS and presentation PDF via Puppeteer |
+| Share | Google Slides handoff button and Render deployment blueprint |
+| Safety | Server-side AI keys, trusted slide data, sanitized provider diagnostics |
+
+## 🎬 See it in action
+
+The banner above is an animated SVG stored in the repository, so the project page does not depend on a third-party image host. For a full product walkthrough, run the app locally and record the prompt-to-export flow:
+
+```powershell
+cd D:\PPTgeni
 npm install
-copy .env.example .env
 npm start
 ```
 
-Open `http://localhost:3000`. The app works without AI keys using a deterministic local generator. In production, it tries the primary OpenRouter provider, then the optional Hugging Face fallback, and finally the local generator. All keys stay server-side.
+Open [http://localhost:3000](http://localhost:3000), choose a free model, enter a prompt such as:
 
-## Render deployment
+> Create a 7-slide tech hackathon pitch for a privacy-first campus safety assistant. Include the problem, users, architecture, demo flow, impact, roadmap, and a memorable closing.
 
-The repository includes `render.yaml`. In Render, choose **New > Blueprint**, connect `LovelySharma-dev/PPTgeni`, and select the `main` branch. Add these secret values when prompted:
+## 🧠 AI provider chain
 
-- `AI_API_KEY`: OpenRouter API key
-- `AI_FALLBACK_MODEL`: a currently available Hugging Face chat model
-- `AI_FALLBACK_API_KEY`: a Hugging Face fine-grained token with **Inference > Make calls to Inference Providers**
+PPTgeni uses a resilient provider order:
 
-Render supplies `PORT` automatically. The service starts with `npm start`.
+```text
+OpenRouter selected model
+        ↓ if unavailable
+Hugging Face fallback
+        ↓ if unavailable
+deterministic local generator
+```
 
-### Provider errors
+The landing page loads OpenRouter's current zero-price catalog from `/api/models`, prioritizes DeepSeek free variants, and keeps compatibility entries for common `:free` models.
 
-- **OpenRouter 401/403:** create a new OpenRouter key, confirm it belongs to the account with credits, and use a currently available model or `openrouter/auto`. Do not paste the key into source files.
-- **Hugging Face 402:** the selected Inference Provider requires available credits or billing; a valid token alone may not be sufficient. Check the Hugging Face billing/provider status, or leave the fallback unset and use OpenRouter.
-- The application never prints API keys. It reports only the provider status and a short sanitized provider message, then uses the local generator if all providers fail.
+Create `.env` locally from `.env.example`. Never commit it:
 
-## MVP scope
+```env
+AI_API_URL=https://openrouter.ai/api/v1/chat/completions
+AI_API_KEY=your_openrouter_key
+AI_MODEL=openrouter/free
+```
 
-- Prompt understanding with sensible defaults and slide planning
-- Trusted slide JSON rendered by reusable browser components (no generated JavaScript execution)
-- Theme switching, slide selection, text editing, undo/redo, and natural-language improvement shortcuts
-- Editable PowerPoint export via PptxGenJS
-- Dedicated PDF export via Puppeteer
-- Basic quality checks for slide count and text density
+## 🏗️ Architecture
 
-The larger roadmap in the product specification—uploads, research citations, collaboration, reference-template matching, and advanced QA—should be added as separate modules after this end-to-end core is stable.
+```mermaid
+flowchart LR
+  A[Prompt] --> B[Express API]
+  B --> C[OpenRouter / HF]
+  C --> D[Validated slide JSON]
+  D --> E[Vanilla JS editor]
+  E --> F[PptxGenJS]
+  E --> G[Puppeteer PDF]
+  E --> H[Google Slides handoff]
+```
 
-## Free OpenRouter models
+The model never supplies executable browser JavaScript. It returns data; trusted components render that data. This makes the editor easier to validate and keeps export behavior deterministic.
 
-The generator loads the current zero-price models from OpenRouter at `/api/models`, including every active `:free` model returned by the catalog. It also keeps a small compatibility list containing the OpenRouter free router, DeepSeek free variants, Gemini Flash Experimental, Llama Instruct, and Qwen Coder so those choices remain visible when a provider temporarily omits them. Select the model from the landing page before generating a deck.
+## 🚀 Render deployment
+
+The repository includes [`render.yaml`](render.yaml). In Render, choose **New → Blueprint**, connect this repository, and add:
+
+- `AI_API_KEY` — OpenRouter key
+- `AI_FALLBACK_API_KEY` — optional Hugging Face fine-grained token
+- `AI_FALLBACK_MODEL` — optional available Hugging Face chat model
+
+GitHub Pages cannot run the Express API, AI calls, or Puppeteer exports. Render is the backend host for the complete application.
+
+## 🧪 Development
+
+```powershell
+npm install
+npm test
+node --check server.js
+node --check public/app.js
+npm start
+```
+
+## 🗺️ Roadmap
+
+- Drag-and-drop element positioning
+- Uploads for images, PDFs, PPTX, and research papers
+- Editable chart data tables
+- Speaker notes and rehearsal mode
+- Research mode with traceable citations
+- Google Drive OAuth import/export
+- Collaboration and version history
+
+## License
+
+MIT. Built for fast-moving teams that would rather spend their time improving the idea than wrestling with slide formatting.

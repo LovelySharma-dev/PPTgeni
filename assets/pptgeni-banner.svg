@@ -1,0 +1,30 @@
+<svg width="1200" height="300" viewBox="0 0 1200 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="300" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#101827"/>
+      <stop offset="0.5" stop-color="#172B4F"/>
+      <stop offset="1" stop-color="#0B1220"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="90" y1="60" x2="1080" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5EEAD4"/>
+      <stop offset="0.5" stop-color="#38BDF8"/>
+      <stop offset="1" stop-color="#A78BFA"/>
+    </linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1200" height="300" rx="28" fill="url(#bg)"/>
+  <g opacity="0.18" stroke="#A8B7CF">
+    <path d="M0 70H1200M0 150H1200M0 230H1200M120 0V300M300 0V300M480 0V300M660 0V300M840 0V300M1020 0V300"/>
+  </g>
+  <g filter="url(#glow)" stroke="url(#accent)" stroke-width="3" stroke-linecap="round">
+    <path d="M95 210C210 80 300 235 430 125C560 15 650 230 790 110C900 16 995 135 1110 70">
+      <animate attributeName="stroke-dasharray" values="0 1400;1400 0" dur="3.5s" repeatCount="indefinite"/>
+    </path>
+    <circle cx="95" cy="210" r="7" fill="#5EEAD4"><animate attributeName="r" values="5;10;5" dur="1.5s" repeatCount="indefinite"/></circle>
+    <circle cx="430" cy="125" r="7" fill="#38BDF8"><animate attributeName="r" values="5;10;5" dur="1.2s" repeatCount="indefinite"/></circle>
+    <circle cx="790" cy="110" r="7" fill="#A78BFA"><animate attributeName="r" values="5;10;5" dur="1.7s" repeatCount="indefinite"/></circle>
+  </g>
+  <text x="70" y="85" fill="#5EEAD4" font-family="Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="4">PRESENTATION STUDIO</text>
+  <text x="70" y="145" fill="#F8FAFC" font-family="Arial, sans-serif" font-size="48" font-weight="700">Make the idea visible.</text>
+  <text x="72" y="178" fill="#A8B7CF" font-family="Arial, sans-serif" font-size="18">Prompt → story → editable slides → confident demo</text>
+</svg>
