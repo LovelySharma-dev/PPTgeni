@@ -13,6 +13,10 @@ test("free model selection uses the live catalog and keeps generated visuals", a
   const legacyEditor = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
   assert.match(server, /fetchFreeModels/);
   assert.match(server, /normalizeDeck/);
+  assert.match(server, /campus safety assistant/);
+  assert.match(server, /elementHtml/);
+  assert.match(server, /page\.evaluate/);
+  assert.match(server, /document\.fonts/);
   assert.doesNotMatch(server, /freeModelFallback/);
   assert.doesNotMatch(legacyEditor, /item\.elements = \[\]/);
 });

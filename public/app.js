@@ -15,6 +15,7 @@ const elementMarkup = (element) => {
   if (element.kind === "image") return `<img class="canvas-element media-element" style="${style}" src="${escapeHtml(element.src)}" alt="Slide image">`;
   if (element.kind === "video") return `<div class="canvas-element video-element" style="${style}"><span>▶</span><small>${escapeHtml(element.src)}</small></div>`;
   if (element.kind === "chart") return `<div class="canvas-element chart-element" style="${style}"><div class="bars">${(element.values || [40, 65, 52, 82]).map((value) => `<i style="height:${value}%"></i>`).join("")}</div><small>${escapeHtml(element.label || "Chart")}</small></div>`;
+  if (element.kind === "diagram" || element.kind === "timeline") return `<div class="canvas-element flow-element" style="${style}"><strong>${escapeHtml(element.label || element.kind)}</strong><div>${(element.items || []).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div></div>`;
   return `<div class="canvas-element text-element" style="${style}">${escapeHtml(element.text || "Double-click to edit")}</div>`;
 };
 
