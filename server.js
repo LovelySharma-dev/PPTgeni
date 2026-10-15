@@ -105,6 +105,17 @@ app.post("/api/export/pptx", async (req, res) => {
       const body = slide.body || slide.quote || slide.steps?.join("\n") || slide.left?.items?.map((x) => `• ${x}`).join("\n") || "";
       if (body) page.addText(body, { x: 0.8, y: 2.2, w: 11.4, h: 3, fontSize: 21, color: theme.text, breakLine: false, valign: "mid", margin: 0.1, bullet: body.includes("•") ? { type: "ul" } : undefined });
       if (slide.metrics) slide.metrics.forEach((m, i) => page.addText([{ text: m.value, options: { bold: true, breakLine: true } }, { text: m.label }], { x: 0.8 + i * 3.9, y: 3.2, w: 3.3, h: 1.2, fontSize: 22, color: theme.accent, margin: 0.1 }));
+      for (const element of slide.elements || []) {
+        const x = (Number(element.x || 8) / 100) * 13.333;
+        const y = (Number(element.y || 30) / 100) * 7.5;
+        const w = (Number(element.w || 30) / 100) * 13.333;
+        const h = (Number(element.h || 18) / 100) * 7.5;
+        if (element.kind === "text") page.addText(element.text || "", { x, y, w, h, fontFace: element.font || "Aptos", fontSize: Number(element.size || 18), color: (element.color || theme.text).replace("#", ""), margin: 0.08, breakLine: false });
+        if (element.kind === "shape") page.addShape(PptxGenJS.ShapeType.roundRect, { x, y, w, h, fill: { color: (element.color || theme.accent).replace("#", ""), transparency: 18 }, line: { color: (element.color || theme.accent).replace("#", ""), transparency: 100 } });
+        if (element.kind === "divider") page.addShape(PptxGenJS.ShapeType.line, { x, y, w, h: 0, line: { color: (element.color || theme.accent).replace("#", ""), width: 2 } });
+        if (element.kind === "image" && /^https?:\/\//i.test(element.src || "")) page.addImage({ path: element.src, x, y, w, h });
+        if (element.kind === "chart") page.addChart(PptxGenJS.ChartType.bar, [{ name: element.label || "Data", labels: ["A", "B", "C", "D"], values: element.values || [42, 68, 55, 84] }], { x, y, w, h, catAxisLabelFontFace: "Aptos", showLegend: false, chartColors: [theme.accent.replace("#", "")] });
+      }
       page.addText(`${String(deck.slides.indexOf(slide) + 1).padStart(2, "0")}`, { x: 11.9, y: 6.8, w: 0.5, h: 0.2, fontSize: 9, color: theme.muted, align: "right", margin: 0 });
     }
     const filename = `${randomUUID()}.pptx`;
