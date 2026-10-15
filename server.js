@@ -50,25 +50,24 @@ function localDeck(prompt, theme = "midnight") {
   const spec = parsePrompt(prompt);
   const t = themes[theme] || themes.midnight;
   const slides = [
-    { type: "title", title: spec.topic, subtitle: `A clear, visual story for a ${spec.audience}`, notes: "Open with the audience problem and why it matters now." },
-    { type: "statement", title: "Why this matters now", takeaway: "The status quo creates a visible opportunity for change.", body: `Most teams understand the need to improve ${spec.topic.toLowerCase()}, but fragmented information and unclear next steps slow progress.` },
-    { type: "comparison", title: "From friction to flow", takeaway: "A focused approach turns complexity into a repeatable process.", left: { label: "Today", items: ["Scattered inputs", "Manual decisions", "Hard-to-measure outcomes"] }, right: { label: "With a clear system", items: ["Structured inputs", "Guided decisions", "Visible progress"] } },
-    { type: "process", title: "A practical path forward", takeaway: "Small, validated steps compound into a stronger result.", steps: ["Understand the goal", "Shape the narrative", "Make the evidence visual", "Review and improve"] },
-    { type: "metrics", title: "What good looks like", takeaway: "Quality is measurable before the final export.", metrics: [{ value: "01", label: "Message per slide" }, { value: "16:9", label: "Consistent canvas" }, { value: "100%", label: "Editable structure" }] },
-    { type: "statement", title: "Design for understanding", takeaway: "Every visual should carry meaning, not decoration.", body: "Use contrast to establish hierarchy, whitespace to reduce cognitive load, and diagrams when relationships matter more than prose." },
-    { type: "quote", title: "The audience should remember the idea", quote: "A presentation earns attention by making the next thought easier to understand.", attribution: "PPTgeni design principle" },
-    { type: "closing", title: "Make the next version clearer", subtitle: "Start with the message. Let the system handle the structure.", notes: "Close by restating the single action the audience should take." }
+    { type: "title", title: spec.topic, subtitle: `A clear, visual story for a ${spec.audience}`, notes: "Open with the audience problem and why it matters now.", elements: [{ kind: "shape", shape: "circle", label: "Opportunity", x: 70, y: 58, w: 20, h: 20 }] },
+    { type: "statement", title: "Why this matters now", takeaway: "The status quo creates a visible opportunity for change.", body: `Most teams understand the need to improve ${spec.topic.toLowerCase()}, but fragmented information and unclear next steps slow progress.`, elements: [{ kind: "chart", label: "Current friction", values: [42, 68, 55, 84], x: 58, y: 27, w: 32, h: 38 }] },
+    { type: "comparison", title: "From friction to flow", takeaway: "A focused approach turns complexity into a repeatable process.", left: { label: "Today", items: ["Scattered inputs", "Manual decisions", "Hard-to-measure outcomes"] }, right: { label: "With a clear system", items: ["Structured inputs", "Guided decisions", "Visible progress"] }, elements: [{ kind: "diagram", label: "Before → after", x: 53, y: 28, w: 37, h: 30 }] },
+    { type: "process", title: "A practical path forward", takeaway: "Small, validated steps compound into a stronger result.", steps: ["Understand the goal", "Shape the narrative", "Make the evidence visual", "Review and improve"], elements: [{ kind: "timeline", label: "4-step process", x: 48, y: 28, w: 43, h: 28 }] },
+    { type: "metrics", title: "What good looks like", takeaway: "Quality is measurable before the final export.", metrics: [{ value: "01", label: "Message per slide" }, { value: "16:9", label: "Consistent canvas" }, { value: "100%", label: "Editable structure" }], elements: [{ kind: "chart", label: "Quality signals", values: [35, 60, 82, 95], x: 55, y: 45, w: 35, h: 30 }] },
+    { type: "statement", title: "Design for understanding", takeaway: "Every visual should carry meaning, not decoration.", body: "Use contrast to establish hierarchy, whitespace to reduce cognitive load, and diagrams when relationships matter more than prose.", elements: [{ kind: "shape", shape: "rounded", label: "Meaningful visual", x: 61, y: 30, w: 28, h: 24 }] },
+    { type: "quote", title: "The audience should remember the idea", quote: "A presentation earns attention by making the next thought easier to understand.", attribution: "PPTgeni design principle", elements: [{ kind: "shape", shape: "rounded", label: "Remember this", x: 62, y: 31, w: 27, h: 22 }] },
+    { type: "closing", title: "Make the next version clearer", subtitle: "Start with the message. Let the system handle the structure.", notes: "Close by restating the single action the audience should take.", elements: [{ kind: "diagram", label: "Idea → action", x: 57, y: 30, w: 34, h: 25 }] }
   ];
-  while (slides.length < spec.slideCount) slides.splice(-1, 0, { type: "statement", title: "One idea, made visible", takeaway: "Clarity is a design decision.", body: "Replace dense paragraphs with a focused claim, supporting evidence, and one visual that helps the audience see the connection." });
+  while (slides.length < spec.slideCount) slides.splice(-1, 0, { type: "statement", title: `${spec.topic}: one clear idea`, takeaway: "Clarity is a design decision.", body: "Replace dense paragraphs with a focused claim, supporting evidence, and one visual that helps the audience see the connection.", elements: [{ kind: "shape", shape: "rounded", label: "Key idea", x: 64, y: 32, w: 25, h: 20 }] });
   return { title: spec.topic, theme, themeConfig: t, spec, slides: slides.slice(0, spec.slideCount) };
 }
 
 async function generateDeck(prompt, theme, requestedModel) {
   const providers = [
-    { name: "primary AI provider", url: process.env.AI_API_URL, key: process.env.AI_API_KEY, model: requestedModel || process.env.AI_MODEL || (process.env.AI_API_URL?.includes("openrouter.ai") ? "openrouter/free" : "") },
-    { name: "Hugging Face fallback", url: process.env.AI_FALLBACK_API_URL, key: process.env.AI_FALLBACK_API_KEY, model: process.env.AI_FALLBACK_MODEL }
+    { name: "OpenRouter free provider", url: process.env.AI_API_URL, key: process.env.AI_API_KEY, model: requestedModel === "openrouter/free" || requestedModel?.endsWith(":free") ? requestedModel : "openrouter/free" }
   ].filter((provider) => provider.url && provider.key && provider.model);
-  if (!providers.length) return localDeck(prompt, theme);
+  if (!providers.length) return { ...localDeck(prompt, theme), generationSource: "local fallback" };
   const failures = [];
   for (const provider of providers) {
     try {
@@ -81,7 +80,7 @@ async function generateDeck(prompt, theme, requestedModel) {
         headers["X-Title"] = "PPTgeni";
       }
       const requestBody = (useJsonMode) => ({ model: provider.model, temperature: 0.4, ...(useJsonMode ? { response_format: { type: "json_object" } } : {}), messages: [
-      { role: "system", content: "Return only valid JSON matching {title,slides}. Each slide has type,title and concise presentation-ready fields. Use types title,statement,comparison,process,metrics,quote,closing." },
+      { role: "system", content: "Return only valid JSON matching {title,slides}. Create concise, specific content for every slide. Every slide must include at least one visual element in an elements array. Visual elements must be trusted data only: {kind:'chart',label,values:[number,number,number,number],x,y,w,h}, {kind:'diagram',label,x,y,w,h}, {kind:'timeline',label,x,y,w,h}, {kind:'shape',shape:'circle'|'rounded',label,x,y,w,h}, or {kind:'image',src,label,x,y,w,h} using a relevant stable https image URL only when appropriate. Use varied slide types title,statement,comparison,process,metrics,quote,closing. Never return JavaScript, HTML, markdown, or invented citations." },
       { role: "user", content: prompt }
         ] });
       let response = await fetch(provider.url, { method: "POST", headers, body: JSON.stringify(requestBody(true)) });
@@ -97,7 +96,7 @@ async function generateDeck(prompt, theme, requestedModel) {
       const content = Array.isArray(rawContent) ? rawContent.map((part) => part.text || "").join("") : rawContent;
       if (!content) throw new Error("returned no content");
       const parsed = JSON.parse(content.replace(/^```json\s*|\s*```$/g, ""));
-      if (!parsed || !Array.isArray(parsed.slides) || parsed.slides.length < 1 || parsed.slides.some((item) => !item.title)) throw new Error("returned invalid slide structure");
+      if (!parsed || !Array.isArray(parsed.slides) || parsed.slides.length < 1 || parsed.slides.some((item) => !item.title || !Array.isArray(item.elements) || item.elements.length < 1)) throw new Error("returned invalid slide structure or missing visuals");
       return { ...parsed, theme, themeConfig: themes[theme] || themes.midnight, spec: parsePrompt(prompt), generationSource: provider.name };
     } catch (error) {
       failures.push(`${provider.name}: ${error.message}`);
@@ -114,7 +113,7 @@ app.get("/api/models", async (_req, res) => {
     if (!response.ok) throw new Error(`OpenRouter returned ${response.status}`);
     const data = await response.json();
     const models = (data.data || [])
-      .filter((model) => model.id.endsWith(":free") || (Number(model.pricing?.prompt) === 0 && Number(model.pricing?.completion) === 0))
+      .filter((model) => model.id === "openrouter/free" || model.id.endsWith(":free"))
       .map((model) => ({ id: model.id, name: model.name || model.id, provider: model.id.split("/")[0] }))
       .sort((a, b) => `${b.id.toLowerCase().includes("deepseek")}${a.name}`.localeCompare(`${a.id.toLowerCase().includes("deepseek")}${b.name}`));
     const known = new Set(models.map((model) => model.id));
@@ -159,6 +158,7 @@ app.post("/api/export/pptx", async (req, res) => {
         if (element.kind === "divider") page.addShape(PptxGenJS.ShapeType.line, { x, y, w, h: 0, line: { color: (element.color || theme.accent).replace("#", ""), width: 2 } });
         if (element.kind === "image" && /^https?:\/\//i.test(element.src || "")) page.addImage({ path: element.src, x, y, w, h });
         if (element.kind === "chart") page.addChart(PptxGenJS.ChartType.bar, [{ name: element.label || "Data", labels: ["A", "B", "C", "D"], values: element.values || [42, 68, 55, 84] }], { x, y, w, h, catAxisLabelFontFace: "Aptos", showLegend: false, chartColors: [theme.accent.replace("#", "")] });
+        if (element.kind === "diagram" || element.kind === "timeline") page.addText(element.label || element.kind, { x, y, w, h, color: theme.accent.replace("#", ""), bold: true, align: "center", valign: "mid", margin: 0.08, fit: "shrink" });
       }
       page.addText(`${String(deck.slides.indexOf(slide) + 1).padStart(2, "0")}`, { x: 11.9, y: 6.8, w: 0.5, h: 0.2, fontSize: 9, color: theme.muted, align: "right", margin: 0 });
     }
