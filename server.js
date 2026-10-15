@@ -57,15 +57,26 @@ async function generateDeck(prompt, theme) {
   const failures = [];
   for (const provider of providers) {
     try {
+      const headers = {
+        "content-type": "application/json",
+        authorization: `Bearer ${provider.key}`
+      };
+      if (provider.url.includes("openrouter.ai")) {
+        headers["HTTP-Referer"] = process.env.APP_URL || "http://localhost:3000";
+        headers["X-Title"] = "PPTgeni";
+      }
       const response = await fetch(provider.url, {
         method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${provider.key}` },
+        headers,
         body: JSON.stringify({ model: provider.model, temperature: 0.4, messages: [
       { role: "system", content: "Return only valid JSON matching {title,slides}. Each slide has type,title and concise presentation-ready fields. Use types title,statement,comparison,process,metrics,quote,closing." },
       { role: "user", content: prompt }
         ] })
       });
-      if (!response.ok) throw new Error(`returned ${response.status}`);
+      if (!response.ok) {
+        const providerMessage = (await response.text()).replace(/\b(sk|hf|or-v1)_[A-Za-z0-9_-]+/g, "[redacted]").slice(0, 240);
+        throw new Error(`returned ${response.status}${providerMessage ? `: ${providerMessage}` : ""}`);
+      }
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content;
       if (!content) throw new Error("returned no content");

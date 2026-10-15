@@ -22,6 +22,12 @@ The repository includes `render.yaml`. In Render, choose **New > Blueprint**, co
 
 Render supplies `PORT` automatically. The service starts with `npm start`.
 
+### Provider errors
+
+- **OpenRouter 401/403:** create a new OpenRouter key, confirm it belongs to the account with credits, and use a currently available model or `openrouter/auto`. Do not paste the key into source files.
+- **Hugging Face 402:** the selected Inference Provider requires available credits or billing; a valid token alone may not be sufficient. Check the Hugging Face billing/provider status, or leave the fallback unset and use OpenRouter.
+- The application never prints API keys. It reports only the provider status and a short sanitized provider message, then uses the local generator if all providers fail.
+
 ## MVP scope
 
 - Prompt understanding with sensible defaults and slide planning
