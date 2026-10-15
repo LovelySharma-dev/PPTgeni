@@ -15,6 +15,7 @@ const elementMarkup = (element) => {
   if (element.kind === "image") return `<img class="canvas-element media-element" style="${style}" src="${escapeHtml(element.src)}" alt="Slide image">`;
   if (element.kind === "video") return `<div class="canvas-element video-element" style="${style}"><span>▶</span><small>${escapeHtml(element.src)}</small></div>`;
   if (element.kind === "chart") return `<div class="canvas-element chart-element" style="${style}"><div class="bars">${(element.values || [40, 65, 52, 82]).map((value) => `<i style="height:${value}%"></i>`).join("")}</div><small>${escapeHtml(element.label || "Chart")}</small></div>`;
+  if (element.kind === "diagram" || element.kind === "timeline") return `<div class="canvas-element flow-element" style="${style}"><strong>${escapeHtml(element.label || element.kind)}</strong><div>${(element.items || []).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div></div>`;
   return `<div class="canvas-element text-element" style="${style}">${escapeHtml(element.text || "Double-click to edit")}</div>`;
 };
 
@@ -40,7 +41,7 @@ const render = () => {
   $("#elementList").innerHTML = (current.elements || []).map((item, index) => `<button class="element-chip" data-element="${index}">${item.kind} <span>×</span></button>`).join("");
   document.querySelectorAll(".element-chip").forEach((button) => button.addEventListener("click", () => { saveState(); current.elements.splice(Number(button.dataset.element), 1); render(); }));
   $("#qualityText").textContent = `${deck.slides.length} slides · ${(current.elements || []).length} visual elements · ${(current.body || "").length > 260 ? "Review dense text" : "Readable density"}`;
-  $("#exportPptx").disabled = $("#exportPdf").disabled = $("#openSlides").disabled = false;
+  $("#exportPptx").disabled = $("#exportPdf").disabled = false;
   $("#undo").disabled = !history.length; $("#redo").disabled = !future.length;
 };
 
@@ -51,7 +52,7 @@ const loadThemes = async () => {
 const loadModels = async () => {
   models = await fetch("/api/models").then((response) => response.json());
   $("#model").innerHTML = models.map((model) => `<option value="${escapeHtml(model.id)}">${escapeHtml(model.name)} · ${escapeHtml(model.provider)}</option>`).join("");
-  const preferred = models.find((model) => model.id.includes("deepseek")) || models[0];
+  const preferred = models[0];
   if (preferred) $("#model").value = preferred.id;
 };
 
@@ -61,8 +62,8 @@ const createDeck = async () => {
   $("#generate").disabled = true; $("#generate").innerHTML = "Building your story…";
   try {
     deck = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt, theme: "midnight", model: $("#model").value }) }).then(async (response) => { const value = await response.json(); if (!response.ok) throw new Error(value.error); return value; });
-    deck.model = $("#model").value;
-    deck.font = "Aptos"; deck.slides.forEach((item) => { item.elements = []; });
+    deck.model = deck.model || $("#model").value;
+    deck.font = "Aptos"; deck.slides.forEach((item) => { item.elements = item.elements || []; });
     selected = 0; history = []; future = []; $("#welcome").classList.add("hidden"); $("#studio").classList.remove("hidden"); render();
   } catch (error) { alert(error.message); } finally { $("#generate").disabled = false; $("#generate").innerHTML = "Generate outline <span>→</span>"; }
 };
@@ -95,6 +96,5 @@ $("#redo").addEventListener("click", () => { if (!future.length) return; history
 const download = async (format) => { const response = await fetch(`/api/export/${format}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(deck) }); if (!response.ok) return alert((await response.json()).error); const blob = await response.blob(); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `pptgeni-presentation.${format}`; link.click(); URL.revokeObjectURL(link.href); };
 $("#exportPptx").addEventListener("click", () => download("pptx"));
 $("#exportPdf").addEventListener("click", () => download("pdf"));
-$("#openSlides").addEventListener("click", () => window.open("https://slides.google.com/create", "_blank", "noopener,noreferrer"));
 loadThemes();
 loadModels();

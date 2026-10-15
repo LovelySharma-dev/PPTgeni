@@ -30,14 +30,7 @@ const themes = {
   electric: { name: "Electric blue", background: "07152E", surface: "102A54", text: "F1F7FF", muted: "A5C3EA", accent: "38BDF8" }
 };
 
-const freeModelFallback = [
-  { id: "openrouter/free", name: "OpenRouter Free Router", provider: "OpenRouter" },
-  { id: "deepseek/deepseek-r1:free", name: "DeepSeek R1 (free)", provider: "DeepSeek" },
-  { id: "deepseek/deepseek-chat:free", name: "DeepSeek Chat (free)", provider: "DeepSeek" },
-  { id: "google/gemini-2.0-flash-exp:free", name: "Gemini 2.0 Flash Experimental (free)", provider: "Google" },
-  { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B Instruct (free)", provider: "Meta" },
-  { id: "qwen/qwen-2.5-coder-32b-instruct:free", name: "Qwen 2.5 Coder 32B (free)", provider: "Qwen" }
-];
+const openRouterModelsUrl = "https://openrouter.ai/api/v1/models";
 
 function parsePrompt(prompt) {
   const text = String(prompt || "").trim();
@@ -49,6 +42,19 @@ function parsePrompt(prompt) {
 function localDeck(prompt, theme = "midnight") {
   const spec = parsePrompt(prompt);
   const t = themes[theme] || themes.midnight;
+  if (/campus safety|hackathon|privacy-first/i.test(prompt)) {
+    const slides = [
+      { type: "title", title: "Safety support that respects privacy", subtitle: "A campus safety assistant for faster, calmer decisions", body: "Built for a university hackathon jury: help students find the right support without turning sensitive moments into a data trail.", elements: [{ kind: "shape", shape: "circle", label: "Privacy by design", x: 70, y: 54, w: 20, h: 20 }] },
+      { type: "statement", title: "Students need help before a situation becomes an incident", takeaway: "The gap is not awareness; it is the friction between uncertainty and the next safe action.", body: "Students may not know whether to contact campus security, health services, a resident advisor, or a trusted person. In a stressful moment, searching across disconnected channels delays action and can expose more personal information than necessary.", bullets: ["Unclear first step", "Fragmented campus resources", "Fear of creating a permanent record"], elements: [{ kind: "diagram", label: "Uncertainty → friction → delayed support", items: ["Uncertainty", "Friction", "Delayed support"], x: 52, y: 28, w: 40, h: 30 }] },
+      { type: "comparison", title: "One calm path for students and responders", takeaway: "The assistant turns a vague concern into a user-controlled next step.", body: "Students describe what they need in plain language. The system suggests the smallest useful action, shows why it fits, and keeps escalation in the student's hands.", left: { label: "Without a guide", items: ["Search many pages", "Repeat the story", "Guess who to contact"] }, right: { label: "With the assistant", items: ["Describe the need once", "See safe options", "Choose what to share"] }, elements: [{ kind: "diagram", label: "Need → options → chosen support", items: ["Need", "Options", "Chosen support"], x: 52, y: 30, w: 40, h: 30 }] },
+      { type: "process", title: "The experience is designed around consent", takeaway: "Every step makes the next action visible without forcing disclosure.", body: "The assistant helps with navigation, not surveillance. It can answer questions, explain campus resources, and offer escalation paths while the student controls what happens next.", steps: ["Describe the situation", "Clarify urgency and preferences", "Show relevant campus options", "Confirm the student's next action"], elements: [{ kind: "timeline", label: "Describe → clarify → choose → act", items: ["Describe", "Clarify", "Choose", "Act"], x: 48, y: 30, w: 44, h: 28 }] },
+      { type: "statement", title: "A small system can stay trustworthy by keeping boundaries explicit", takeaway: "The assistant routes people to approved support; it does not diagnose, investigate, or silently report.", body: "The product separates conversation from campus systems. It minimizes retained data, makes escalation explicit, and keeps human services responsible for decisions that require judgment.", bullets: ["Minimal data by default", "Visible escalation choices", "Human ownership of high-risk decisions"], elements: [{ kind: "diagram", label: "Student → assistant → approved service", items: ["Student", "Assistant", "Approved service"], x: 52, y: 28, w: 40, h: 30 }] },
+      { type: "process", title: "From message to support in a focused demo", takeaway: "The demo proves usefulness in under a minute without pretending the model replaces people.", body: "A student asks for help finding a safe route after an uncomfortable encounter. The assistant asks one clarifying question, presents two campus options, and lets the student choose whether to contact a human.", steps: ["Ask for help", "Clarify the immediate need", "Compare two options", "Hand off with consent"], elements: [{ kind: "timeline", label: "Ask → clarify → compare → hand off", items: ["Ask", "Clarify", "Compare", "Hand off"], x: 48, y: 30, w: 44, h: 28 }] },
+      { type: "comparison", title: "Differentiation is a product boundary, not a bigger model", takeaway: "Trust comes from constrained actions, explainable routing, and privacy-preserving defaults.", body: "The concept competes by making the safe path easier to understand. It does not claim to predict incidents or produce unsupported risk scores.", left: { label: "Common assistant pattern", items: ["Broad data collection", "Opaque recommendations", "Automation first"] }, right: { label: "PPTgeni concept", items: ["Data minimization", "Explainable options", "Consent before handoff"] }, elements: [{ kind: "shape", shape: "rounded", label: "Trust is the differentiator", x: 61, y: 34, w: 28, h: 22 }] },
+      { type: "closing", title: "Make the next safe action easier to take", subtitle: "Start with a focused campus pilot, measure clarity and successful handoffs, then expand carefully.", body: "Next step: validate the resource map with students and campus services before adding more automation.", bullets: ["Pilot with approved resources", "Measure time-to-right-support", "Review privacy and safety with stakeholders"], elements: [{ kind: "diagram", label: "Pilot → learn → improve", items: ["Pilot", "Learn", "Improve"], x: 54, y: 30, w: 38, h: 26 }] }
+    ];
+    return { title: "Privacy-first campus safety assistant", theme, themeConfig: t, spec, slides };
+  }
   const slides = [
     { type: "title", title: spec.topic, subtitle: `A clear, visual story for a ${spec.audience}`, notes: "Open with the audience problem and why it matters now.", elements: [{ kind: "shape", shape: "circle", label: "Opportunity", x: 70, y: 58, w: 20, h: 20 }] },
     { type: "statement", title: "Why this matters now", takeaway: "The status quo creates a visible opportunity for change.", body: `Most teams understand the need to improve ${spec.topic.toLowerCase()}, but fragmented information and unclear next steps slow progress.`, elements: [{ kind: "chart", label: "Current friction", values: [42, 68, 55, 84], x: 58, y: 27, w: 32, h: 38 }] },
@@ -63,13 +69,66 @@ function localDeck(prompt, theme = "midnight") {
   return { title: spec.topic, theme, themeConfig: t, spec, slides: slides.slice(0, spec.slideCount) };
 }
 
+function normalizeVisual(element, theme) {
+  if (!element || typeof element !== "object") return null;
+  const kind = ["chart", "diagram", "timeline", "shape", "image", "text", "divider"].includes(element.kind) ? element.kind : "shape";
+  const visual = {
+    ...element,
+    kind,
+    label: String(element.label || (kind === "chart" ? "Supporting data" : "Key idea")).slice(0, 120),
+    x: Math.min(Math.max(Number(element.x) || 56, 4), 88),
+    y: Math.min(Math.max(Number(element.y) || 28, 8), 78),
+    w: Math.min(Math.max(Number(element.w) || 34, 10), 48),
+    h: Math.min(Math.max(Number(element.h) || 24, 10), 48),
+    color: typeof element.color === "string" ? element.color : `#${theme.accent}`
+  };
+  if (kind === "chart") visual.values = Array.isArray(element.values) && element.values.length ? element.values.slice(0, 8).map((value) => Math.max(0, Number(value) || 0)) : [42, 68, 55, 84];
+  if (kind === "shape") visual.shape = element.shape === "circle" ? "circle" : "rounded";
+  if (kind === "text") visual.text = String(element.text || visual.label).slice(0, 240);
+  if (kind === "image" && !/^https?:\/\//i.test(element.src || "")) return null;
+  return visual;
+}
+
+function normalizeDeck(deck, prompt, theme) {
+  const themeConfig = themes[theme] || themes.midnight;
+  const slides = Array.isArray(deck?.slides) ? deck.slides : [];
+  if (!slides.length) return { ...localDeck(prompt, theme), generationSource: "local fallback" };
+  return {
+    ...deck,
+    title: String(deck.title || parsePrompt(prompt).topic).slice(0, 160),
+    theme,
+    themeConfig,
+    spec: parsePrompt(prompt),
+    slides: slides.map((slide, index) => {
+      const elements = (Array.isArray(slide.elements) ? slide.elements : []).map((element) => normalizeVisual(element, themeConfig)).filter(Boolean);
+      if (!elements.length) elements.push(normalizeVisual({ kind: index % 2 ? "chart" : "shape", label: "System-enriched visual" }, themeConfig));
+      return { ...slide, title: String(slide.title || `Slide ${index + 1}`).slice(0, 160), elements };
+    })
+  };
+}
+
+async function fetchFreeModels() {
+  const response = await fetch(openRouterModelsUrl);
+  if (!response.ok) throw new Error(`OpenRouter returned ${response.status}`);
+  const data = await response.json();
+  return (data.data || [])
+    .filter((model) => model.id === "openrouter/free" || model.id.endsWith(":free"))
+    .map((model) => ({ id: model.id, name: model.name || model.id, provider: model.id.split("/")[0] }))
+    .sort((a, b) => a.id === "openrouter/free" ? -1 : b.id === "openrouter/free" ? 1 : a.name.localeCompare(b.name));
+}
+
 async function generateDeck(prompt, theme, requestedModel) {
-  const providers = [
-    { name: "OpenRouter free provider", url: process.env.AI_API_URL, key: process.env.AI_API_KEY, model: requestedModel === "openrouter/free" || requestedModel?.endsWith(":free") ? requestedModel : "openrouter/free" }
-  ].filter((provider) => provider.url && provider.key && provider.model);
-  if (!providers.length) return { ...localDeck(prompt, theme), generationSource: "local fallback" };
+  if (!process.env.AI_API_URL || !process.env.AI_API_KEY) return { ...localDeck(prompt, theme), generationSource: "local fallback" };
+  let availableModels = [];
+  let catalogFailed = false;
+  try { availableModels = await fetchFreeModels(); } catch (error) { catalogFailed = true; console.warn(`Could not refresh OpenRouter free models: ${error.message}`); }
+  const selected = availableModels.some((model) => model.id === requestedModel) ? requestedModel : availableModels[0]?.id;
+  const candidates = availableModels
+    .sort((a, b) => Number(b.id === selected) - Number(a.id === selected))
+    .map((model) => ({ name: `${model.provider} free model`, model: model.id }));
+  if (!candidates.length && catalogFailed) candidates.push({ name: "OpenRouter free router", model: "openrouter/free" });
   const failures = [];
-  for (const provider of providers) {
+  for (const provider of candidates) {
     try {
       const headers = {
         "content-type": "application/json",
@@ -96,8 +155,8 @@ async function generateDeck(prompt, theme, requestedModel) {
       const content = Array.isArray(rawContent) ? rawContent.map((part) => part.text || "").join("") : rawContent;
       if (!content) throw new Error("returned no content");
       const parsed = JSON.parse(content.replace(/^```json\s*|\s*```$/g, ""));
-      if (!parsed || !Array.isArray(parsed.slides) || parsed.slides.length < 1 || parsed.slides.some((item) => !item.title || !Array.isArray(item.elements) || item.elements.length < 1)) throw new Error("returned invalid slide structure or missing visuals");
-      return { ...parsed, theme, themeConfig: themes[theme] || themes.midnight, spec: parsePrompt(prompt), generationSource: provider.name };
+      if (!parsed || !Array.isArray(parsed.slides) || parsed.slides.length < 1 || parsed.slides.some((item) => !item.title)) throw new Error("returned invalid slide structure");
+      return { ...normalizeDeck(parsed, prompt, theme), model: provider.model, generationSource: provider.name };
     } catch (error) {
       failures.push(`${provider.name}: ${error.message}`);
     }
@@ -109,18 +168,10 @@ async function generateDeck(prompt, theme, requestedModel) {
 app.get("/api/themes", (_req, res) => res.json(Object.entries(themes).map(([id, value]) => ({ id, ...value }))));
 app.get("/api/models", async (_req, res) => {
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/models");
-    if (!response.ok) throw new Error(`OpenRouter returned ${response.status}`);
-    const data = await response.json();
-    const models = (data.data || [])
-      .filter((model) => model.id === "openrouter/free" || model.id.endsWith(":free"))
-      .map((model) => ({ id: model.id, name: model.name || model.id, provider: model.id.split("/")[0] }))
-      .sort((a, b) => `${b.id.toLowerCase().includes("deepseek")}${a.name}`.localeCompare(`${a.id.toLowerCase().includes("deepseek")}${b.name}`));
-    const known = new Set(models.map((model) => model.id));
-    res.json([...models, ...freeModelFallback.filter((model) => !known.has(model.id))]);
+    res.json(await fetchFreeModels());
   } catch (error) {
     console.warn(`Could not load OpenRouter free models: ${error.message}`);
-    res.json(freeModelFallback);
+    res.json([{ id: "openrouter/free", name: "OpenRouter Free Router", provider: "OpenRouter" }]);
   }
 });
 app.post("/api/generate", async (req, res) => {
@@ -147,6 +198,7 @@ app.post("/api/export/pptx", async (req, res) => {
       if (slide.subtitle || slide.takeaway) page.addText(slide.subtitle || slide.takeaway, { x: 0.65, y: 1.2, w: 11.8, h: 0.7, fontSize: 15, color: theme.muted, margin: 0, breakLine: false });
       const body = slide.body || slide.quote || slide.steps?.join("\n") || slide.left?.items?.map((x) => `• ${x}`).join("\n") || "";
       if (body) page.addText(body, { x: 0.8, y: 2.2, w: 11.4, h: 3, fontSize: 21, color: theme.text, breakLine: false, valign: "mid", margin: 0.1, bullet: body.includes("•") ? { type: "ul" } : undefined });
+      if (Array.isArray(slide.bullets) && slide.bullets.length) page.addText(slide.bullets.map((item) => `• ${item}`).join("\n"), { x: 0.8, y: 4.75, w: 5.7, h: 1.35, fontSize: 15, color: theme.muted, breakLine: false, margin: 0.06, bullet: { type: "ul" } });
       if (slide.metrics) slide.metrics.forEach((m, i) => page.addText([{ text: m.value, options: { bold: true, breakLine: true } }, { text: m.label }], { x: 0.8 + i * 3.9, y: 3.2, w: 3.3, h: 1.2, fontSize: 22, color: theme.accent, margin: 0.1 }));
       for (const element of slide.elements || []) {
         const x = (Number(element.x || 8) / 100) * 13.333;
@@ -154,11 +206,14 @@ app.post("/api/export/pptx", async (req, res) => {
         const w = (Number(element.w || 30) / 100) * 13.333;
         const h = (Number(element.h || 18) / 100) * 7.5;
         if (element.kind === "text") page.addText(element.text || "", { x, y, w, h, fontFace: element.font || "Aptos", fontSize: Number(element.size || 18), color: (element.color || theme.text).replace("#", ""), margin: 0.08, breakLine: false });
-        if (element.kind === "shape") page.addShape(PptxGenJS.ShapeType.roundRect, { x, y, w, h, fill: { color: (element.color || theme.accent).replace("#", ""), transparency: 18 }, line: { color: (element.color || theme.accent).replace("#", ""), transparency: 100 } });
-        if (element.kind === "divider") page.addShape(PptxGenJS.ShapeType.line, { x, y, w, h: 0, line: { color: (element.color || theme.accent).replace("#", ""), width: 2 } });
+        if (element.kind === "shape") page.addShape("roundRect", { x, y, w, h, fill: { color: (element.color || theme.accent).replace("#", ""), transparency: 18 }, line: { color: (element.color || theme.accent).replace("#", ""), transparency: 100 } });
+        if (element.kind === "divider") page.addShape("line", { x, y, w, h: 0, line: { color: (element.color || theme.accent).replace("#", ""), width: 2 } });
         if (element.kind === "image" && /^https?:\/\//i.test(element.src || "")) page.addImage({ path: element.src, x, y, w, h });
-        if (element.kind === "chart") page.addChart(PptxGenJS.ChartType.bar, [{ name: element.label || "Data", labels: ["A", "B", "C", "D"], values: element.values || [42, 68, 55, 84] }], { x, y, w, h, catAxisLabelFontFace: "Aptos", showLegend: false, chartColors: [theme.accent.replace("#", "")] });
-        if (element.kind === "diagram" || element.kind === "timeline") page.addText(element.label || element.kind, { x, y, w, h, color: theme.accent.replace("#", ""), bold: true, align: "center", valign: "mid", margin: 0.08, fit: "shrink" });
+        if (element.kind === "chart") page.addChart("bar", [{ name: element.label || "Data", labels: ["A", "B", "C", "D"], values: element.values || [42, 68, 55, 84] }], { x, y, w, h, catAxisLabelFontFace: "Aptos", showLegend: false, chartColors: [theme.accent.replace("#", "")] });
+        if (element.kind === "diagram" || element.kind === "timeline") {
+          page.addText(element.label || element.kind, { x, y, w, h: 0.35, color: theme.accent.replace("#", ""), bold: true, align: "center", margin: 0.02, fit: "shrink" });
+          (element.items || []).forEach((item, index) => page.addText(String(item), { x: x + (w / Math.max(element.items.length, 1)) * index, y: y + 0.5, w: w / Math.max(element.items.length, 1) - 0.08, h: Math.max(h - 0.6, 0.35), color: theme.text.replace("#", ""), align: "center", valign: "mid", margin: 0.06, fill: { color: theme.surface.replace("#", "") }, line: { color: theme.accent.replace("#", ""), width: 1 }, fit: "shrink" }));
+        }
       }
       page.addText(`${String(deck.slides.indexOf(slide) + 1).padStart(2, "0")}`, { x: 11.9, y: 6.8, w: 0.5, h: 0.2, fontSize: 9, color: theme.muted, align: "right", margin: 0 });
     }
@@ -174,7 +229,27 @@ app.post("/api/export/pdf", async (req, res) => {
     const filename = `${randomUUID()}.pdf`;
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-    await page.setContent(`<!doctype html><style>@page{size:13.333in 7.5in;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Arial;background:#${req.body.themeConfig?.background || "101827"};color:#${req.body.themeConfig?.text || "F8FAFC"}}.slide{width:13.333in;height:7.5in;padding:.7in;page-break-after:always;position:relative}.title{font-size:34px;font-weight:bold}.copy{margin-top:28px;font-size:22px;line-height:1.45;color:#${req.body.themeConfig?.muted || "A8B7CF"}}.num{position:absolute;right:.7in;bottom:.35in}</style>${(req.body.slides || []).map((s, i) => `<section class="slide"><div class="title">${escapeHtml(s.title || "")}</div><div class="copy">${escapeHtml(s.subtitle || s.takeaway || s.body || s.quote || s.steps?.join(" · ") || "")}</div><div class="num">${String(i + 1).padStart(2, "0")}</div></section>`).join("")}`, { waitUntil: "load" });
+    const theme = req.body.themeConfig || themes.midnight;
+    const slides = req.body.slides || [];
+    const elementHtml = (element) => {
+      const x = Number(element.x || 56);
+      const y = Number(element.y || 28);
+      const w = Number(element.w || 34);
+      const h = Number(element.h || 24);
+      const style = `left:${x}%;top:${y}%;width:${w}%;height:${h}%;`;
+      if (element.kind === "chart") return `<div class="visual chart" style="${style}"><div class="bars">${(element.values || [42, 68, 55, 84]).map((value) => `<i style="height:${Math.min(Math.max(Number(value) || 0, 4), 100)}%"></i>`).join("")}</div><small>${escapeHtml(element.label || "Chart")}</small></div>`;
+      if (element.kind === "diagram" || element.kind === "timeline") return `<div class="visual flow" style="${style}"><strong>${escapeHtml(element.label || element.kind)}</strong><div class="nodes">${(element.items || []).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div></div>`;
+      if (element.kind === "text") return `<div class="visual text-visual" style="${style}">${escapeHtml(element.text || element.label || "")}</div>`;
+      if (element.kind === "image" && /^https?:\/\//i.test(element.src || "")) return `<img class="visual" style="${style}" src="${escapeHtml(element.src)}" alt="${escapeHtml(element.label || "Slide image")}">`;
+      return `<div class="visual shape" style="${style}"><strong>${escapeHtml(element.label || "Key idea")}</strong></div>`;
+    };
+    const slideHtml = (slide, index) => {
+      const body = slide.body || slide.quote || slide.steps?.join(" · ") || slide.left?.items?.map((item) => `• ${item}`).join("\n") || "";
+      const bullets = Array.isArray(slide.bullets) ? `<ul>${slide.bullets.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : "";
+      return `<section class="slide"><div class="kicker">${escapeHtml(slide.type || "PRESENTATION")}</div><div class="title">${escapeHtml(slide.title || "")}</div><div class="copy">${escapeHtml(slide.subtitle || slide.takeaway || "")}</div><div class="body">${escapeHtml(body).replace(/\n/g, "<br>")}${bullets}</div><div class="visuals">${(slide.elements || []).map(elementHtml).join("")}</div><div class="num">${String(index + 1).padStart(2, "0")}</div></section>`;
+    };
+    await page.setContent(`<!doctype html><style>@page{size:13.333in 7.5in;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#${theme.background};color:#${theme.text}}.slide{width:13.333in;height:7.5in;padding:.62in .72in;page-break-after:always;position:relative;overflow:hidden}.kicker{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#${theme.accent};font-weight:bold}.title{margin-top:12px;max-width:68%;font-size:31px;line-height:1.08;font-weight:bold}.copy{margin-top:16px;max-width:62%;font-size:17px;line-height:1.35;color:#${theme.muted}}.body{margin-top:20px;max-width:57%;font-size:16px;line-height:1.38}.body ul{padding-left:20px}.body li{margin:7px 0}.visuals{position:absolute;inset:0}.visual{position:absolute;border-radius:14px;border:1px solid #${theme.accent}55;background:#${theme.surface}dd;color:#${theme.text};padding:14px;z-index:1}.visual small{display:block;margin-top:8px;color:#${theme.muted}}.shape{display:flex;align-items:center;justify-content:center;text-align:center}.flow strong{display:block;color:#${theme.accent};font-size:13px}.nodes{display:flex;gap:7px;align-items:center;justify-content:center;margin-top:14px;flex-wrap:wrap}.nodes span{border:1px solid #${theme.accent}99;border-radius:8px;padding:7px 9px;font-size:11px}.chart{display:flex;flex-direction:column;justify-content:flex-end}.bars{height:80%;display:flex;gap:10px;align-items:flex-end}.bars i{display:block;flex:1;background:#${theme.accent};border-radius:5px 5px 0 0}.text-visual{font-size:16px}.num{position:absolute;right:.7in;bottom:.35in;color:#${theme.muted};font-size:10px}</style>${slides.map(slideHtml).join("")}`, { waitUntil: "load" });
+    await page.evaluate(() => document.fonts?.ready);
     await page.pdf({ path: path.join(exportsDir, filename), printBackground: true, width: "13.333in", height: "7.5in", pageRanges: "1-" });
     await browser.close();
     res.download(path.join(exportsDir, filename), "pptgeni-presentation.pdf");
