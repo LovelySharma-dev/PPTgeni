@@ -49,21 +49,34 @@ function localDeck(prompt, theme = "midnight") {
 }
 
 async function generateDeck(prompt, theme) {
-  if (!process.env.AI_API_URL || !process.env.AI_API_KEY || !process.env.AI_MODEL) return localDeck(prompt, theme);
-  const response = await fetch(process.env.AI_API_URL, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${process.env.AI_API_KEY}` },
-    body: JSON.stringify({ model: process.env.AI_MODEL, temperature: 0.4, messages: [
+  const providers = [
+    { name: "primary AI provider", url: process.env.AI_API_URL, key: process.env.AI_API_KEY, model: process.env.AI_MODEL },
+    { name: "Hugging Face fallback", url: process.env.AI_FALLBACK_API_URL, key: process.env.AI_FALLBACK_API_KEY, model: process.env.AI_FALLBACK_MODEL }
+  ].filter((provider) => provider.url && provider.key && provider.model);
+  if (!providers.length) return localDeck(prompt, theme);
+  const failures = [];
+  for (const provider of providers) {
+    try {
+      const response = await fetch(provider.url, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${provider.key}` },
+        body: JSON.stringify({ model: provider.model, temperature: 0.4, messages: [
       { role: "system", content: "Return only valid JSON matching {title,slides}. Each slide has type,title and concise presentation-ready fields. Use types title,statement,comparison,process,metrics,quote,closing." },
       { role: "user", content: prompt }
-    ] })
-  });
-  if (!response.ok) throw new Error(`AI provider returned ${response.status}`);
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error("AI provider returned no content");
-  const parsed = JSON.parse(content.replace(/^```json\s*|\s*```$/g, ""));
-  return { ...parsed, theme, themeConfig: themes[theme] || themes.midnight, spec: parsePrompt(prompt) };
+        ] })
+      });
+      if (!response.ok) throw new Error(`returned ${response.status}`);
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+      if (!content) throw new Error("returned no content");
+      const parsed = JSON.parse(content.replace(/^```json\s*|\s*```$/g, ""));
+      return { ...parsed, theme, themeConfig: themes[theme] || themes.midnight, spec: parsePrompt(prompt) };
+    } catch (error) {
+      failures.push(`${provider.name}: ${error.message}`);
+    }
+  }
+  console.warn(`AI providers failed; using local generator. ${failures.join("; ")}`);
+  return localDeck(prompt, theme);
 }
 
 app.get("/api/themes", (_req, res) => res.json(Object.entries(themes).map(([id, value]) => ({ id, ...value }))));

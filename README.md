@@ -10,7 +10,17 @@ copy .env.example .env
 npm start
 ```
 
-Open `http://localhost:3000`. The app works without an AI key using a deterministic local generator. To connect an OpenAI-compatible provider, set `AI_API_URL`, `AI_API_KEY`, and `AI_MODEL` in `.env`; keys stay server-side.
+Open `http://localhost:3000`. The app works without AI keys using a deterministic local generator. In production, it tries the primary OpenRouter provider, then the optional Hugging Face fallback, and finally the local generator. All keys stay server-side.
+
+## Render deployment
+
+The repository includes `render.yaml`. In Render, choose **New > Blueprint**, connect `LovelySharma-dev/PPTgeni`, and select the `main` branch. Add these secret values when prompted:
+
+- `AI_API_KEY`: OpenRouter API key
+- `AI_FALLBACK_MODEL`: a currently available Hugging Face chat model
+- `AI_FALLBACK_API_KEY`: a Hugging Face fine-grained token with **Inference > Make calls to Inference Providers**
+
+Render supplies `PORT` automatically. The service starts with `npm start`.
 
 ## MVP scope
 

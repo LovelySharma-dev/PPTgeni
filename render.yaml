@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: pptgeni
+    runtime: node
+    region: singapore
+    plan: free
+    branch: main
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AI_API_URL
+        value: https://openrouter.ai/api/v1/chat/completions
+      - key: AI_MODEL
+        value: openrouter/auto
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_FALLBACK_API_URL
+        value: https://router.huggingface.co/v1/chat/completions
+      - key: AI_FALLBACK_MODEL
+        sync: false
+      - key: AI_FALLBACK_API_KEY
+        sync: false
